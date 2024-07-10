@@ -13,4 +13,11 @@ def lemmatisierung_und_stoppwörter_entfernen(text):
 
 bewertungen['review_text'] = bewertungen['review_text'].apply(lemmatisierung_und_stoppwörter_entfernen)
 
+bewertungen.dropna(subset=['review_text'], inplace=True)
+bewertungen.drop_duplicates(subset=['review_text'], inplace=True)
+
+bewertungen.to_csv('C:/temp/studium/TINDER_REVIEWS.csv', index=False)
+print("Bewertungen gefiltert, Datei überschrieben, damit ist die Vorverarbeitung abgeschlossen")
+
+
 

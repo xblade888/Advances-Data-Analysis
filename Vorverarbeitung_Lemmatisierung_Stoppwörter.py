@@ -11,3 +11,6 @@ def lemmatisierung_und_stoppwörter_entfernen(text):
     bereinigte_woerter = [lemmatisierer.lemmatize(wort) for wort in woerter if wort not in stoppwoerter]
     return ' '.join(bereinigte_woerter)
 
+bewertungen['review_text'] = bewertungen['review_text'].apply(lemmatisierung_und_stoppwörter_entfernen)
+
+

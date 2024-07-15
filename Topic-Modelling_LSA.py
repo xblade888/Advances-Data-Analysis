@@ -13,13 +13,19 @@ with open(BoW_features, 'r') as f:
 # 15 Themen entdecken
 n_components = 15 
 modell = TruncatedSVD(n_components=n_components, random_state=42)
-matrix = modell.fit_transform(matrix)
+lsa_matrix = modell.fit_transform(matrix)
 
-print("LSA Themen:")
+topics = []
 for i, comp in enumerate(modell.components_):
     terms_in_comp = terms[np.argsort(comp)][:-16:-1]  # pro Thema 15 Wörter 
+    topics.append(terms_in_comp)
     print(f"Topic {i}: {', '.join(terms_in_comp)}")
 
-lsa = 'C:/temp/studium/LSA_themen.npy'
-np.save(lsa, matrix)
-print("Tpic-Modelelling mit LSA abgeschlossen. In der neuen Datei LSA_themen.npy gespeichert")
+file = 'C:/temp/studium/LSA_topics.txt'
+with open(file, 'w') as f:
+    for idx, topic in enumerate(topics):
+        f.write(f"Topic {idx}: {', '.join(topic)}\n")
+
+lsa_file = 'C:/temp/studium/LSA_themen.npy'
+np.save(lsa_file, modell.components_)
+print("Tpic-Modeling mit LSA abgeschlossen. In der neuen Datei LSA_themen.npy gespeichert")

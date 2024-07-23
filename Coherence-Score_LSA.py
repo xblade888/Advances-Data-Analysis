@@ -17,7 +17,7 @@ features = 'C:/temp/studium/BoW_features.txt'
 with open(features, 'r') as f:
     terms = [line.strip() for line in f]
 
-# Speichern des Hautptwöórtes jedes Thema aus der LSA-Matrix
+# Speichern des Hautptwortes jedes Thema aus der LSA-Matrix
 topics = []
 for topic_idx in range(matrix.shape[0]):
     topic_terms = [terms[i] for i in np.argsort(matrix[topic_idx])[::-1][:15] if i < len(terms)]

@@ -8,11 +8,11 @@ reviews = 'C:/temp/studium/BoW_tinder_reviews.npz'
 matrix = scipy.sparse.load_npz(reviews)
 
 # Laden der Feature-Wörtera aus dem vorherigen Schritt (BoW)
-BoW_features = 'C:/temp/studium/BoW_features.txt'
-with open(BoW_features, 'r') as f:
+features = 'C:/temp/studium/BoW_features.txt'
+with open(features, 'r') as f:
     terms = np.array([line.strip() for line in f])
 
-# Laden des TruncatedSVD Performers und entdecken von 15 Themen und anwenden von LSA
+# Laden des TruncatedSVD Performers, entdecken von 15 Themen und anwenden von LSA
 n_components = 15 
 modell = TruncatedSVD(n_components=n_components, random_state=42)
 lsa = modell.fit_transform(matrix)

@@ -1,125 +1,161 @@
 import pandas as pd
 import re
-import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import TruncatedSVD
-from sklearn.metrics.pairwise import cosine_similarity
 import scipy.sparse
 import numpy as np
+from sklearn.decomposition import TruncatedSVD
+from sklearn.metrics.pairwise import cosine_similarity
+import nltk
+from pandarallel import pandarallel
 
-# Reduzierung auf 1-2 Sterne Bewertungen und bekannte negative Schlüsselwörter
-print("""Bewertungen werden nach neg. Schlüsselwörter und 1-2 Sterne Bewertungen reduziert
-      
-      """)
-bewertungen = pd.read_csv('C:/temp/studium/TINDER_REVIEWS.csv')
-bewertungen = bewertungen[bewertungen['review_rating'].isin([1, 2])]
-schluesselwoerter = ['slow', 'lag', 'crash', 'freeze', 'bug', 'error', 'glitch', 'problem', 'fail', 'broken', 'frustrating', 'disappointing', 'poor', 'unusable', 'not working', 'stupid', 'bad', 'not loading', 'not working', 'connection issues', 'can not access', 'confusing', 'hard to use', 'difficult']
-pattern = '|'.join(schluesselwoerter)
-bewertungen = bewertungen[bewertungen['review_text'].str.contains(pattern, case=False, na=False)]
-bewertungen.to_csv('C:/temp/studium/TINDER_REVIEWS.csv', index=False)
-print("""Bewertungen werden nach neg. Schlüsselwörter und 1-2 Sterne Bewertungen reduziert -> Fortfahren mit der Weiterverarbeitung
-      
-      """)
+print("Starten der Verarbeitung...")
 
-# Weiterverarbeitung mit der Pandas Bibliothek und dem Python-Modul „re“
-print("Bewertungen werden weiter berenigt")
-bewertungen = pd.read_csv('C:/temp/studium/TINDER_REVIEWS.csv')
-def bereinigen(text):
-    text = text.lower()
-    text = re.sub(r'[^A-Za-z\süäöÜÄÖ]', '', text)
-    text = re.sub(r'http\S+', '', text)
-    return text
-bewertungen['review_text'] = bewertungen['review_text'].apply(bereinigen)
-bewertungen.dropna(subset=['review_text'], inplace=True)
-bewertungen.drop_duplicates(subset=['review_text'], inplace=True)
-bewertungen.to_csv('C:/temp/studium/TINDER_REVIEWS.csv', index=False)
-print("""Bewertungen erfolgreich gefiltert, Datei überschrieben
-      
-      """)
+# Phase 1: Datensatz laden und filtern
+def daten_laden_und_filtern(dateipfad):
+    # Datensatz laden
+    daten = pd.read_csv(dateipfad)
 
-# Lemmatisierung und Entfernen von Stoppwörtern mit NLTK
-print("Bewertungen werden nach lemmatisiert und Stoppwörter entfernt")
-lemmatisierung = WordNetLemmatizer()
-stoppwoerter = set(stopwords.words('english'))
-bewertungen = pd.read_csv('C:/temp/studium/TINDER_REVIEWS.csv')
-def lemmatisierung_und_stoppwoerter_entfernen(text):
-    woerter = text.split()
-    bereinigte_woerter = [lemmatisierung.lemmatize(wort) for wort in woerter if wort not in stoppwoerter]
-    return ' '.join(bereinigte_woerter)
-bewertungen['review_text'] = bewertungen['review_text'].apply(lemmatisierung_und_stoppwoerter_entfernen)
-bewertungen.dropna(subset=['review_text'], inplace=True)
-bewertungen.drop_duplicates(subset=['review_text'], inplace=True)
-bewertungen.to_csv('C:/temp/studium/TINDER_REVIEWS.csv', index=False)
-print("""Bewertungen wurden Lemmatisiert und gefiltert -> Fortfahren mit Bag-of-Words (BoW) Vektorisierung
-      
-      """)
+    # Filtern der Bewertungen mit 1 oder 2 Sternen
+    daten = daten[daten['review_rating'].isin([1, 2])]
 
-# Bag-of-Words (BoW)
-print("Beginne mit der Vektorisierung mit BoW")
-bewertungen = pd.read_csv('C:/temp/studium/TINDER_REVIEWS.csv')
-vectorizer = CountVectorizer()
-bow_matrix = vectorizer.fit_transform(bewertungen['review_text'])
-bow_file = 'C:/temp/studium/BoW_tinder_reviews.npz'
-scipy.sparse.save_npz(bow_file, bow_matrix)
-features_file = 'C:/temp/studium/BoW_features.txt'
-with open(features_file, 'w') as f:
-    for feature in vectorizer.get_feature_names_out():
-        f.write(f"{feature}\n")
-print("""BoW abgeschlossen. Informationen wurden in der BoW_tinder_reviews.npz gespeichert -> Fortfahren mit dem Topic Modelling mit LSA
-      
-      """)
+    # Schlüsselwörter für die Filterung definieren
+    schluesselwoerter = [
+        'slow', 'lag', 'crash', 'freeze', 'bug', 'error', 'glitch', 'problem', 
+        'fail', 'broken', 'frustrating', 'disappointing', 'poor', 'unusable', 
+        'not working', 'stupid', 'bad', 'not loading', 'connection issues', 
+        'can not access', 'confusing', 'hard to use', 'difficult'
+    ]
 
-# LSA
-print("Anwenden von LSA")
-reviews = 'C:/temp/studium/BoW_tinder_reviews.npz'
-matrix = scipy.sparse.load_npz(reviews)
-features = 'C:/temp/studium/BoW_features.txt'
-with open(features, 'r') as f:
-    terms = np.array([line.strip() for line in f])
-n_components = 15 
-modell = TruncatedSVD(n_components=n_components, random_state=42)
-lsa = modell.fit_transform(matrix)
-topics = []
-for i, comp in enumerate(modell.components_):
-    terms_in_comp = terms[np.argsort(comp)][:-16:-1] # pro Thema wieder 15 Wötert
-    topics.append(terms_in_comp)
-    print(f"Topic {i}: {', '.join(terms_in_comp)}")
-file = 'C:/temp/studium/LSA_topics.txt'
-with open(file, 'w') as f:
-    for idx, topic in enumerate(topics):
-        f.write(f"Topic {idx}: {', '.join(topic)}\n")
-lsa_file = 'C:/temp/studium/LSA_themen.npy'
-np.save(lsa_file, modell.components_)
-print("""LSA abgeschlossen. Informationen wurden in der LSA_themen.npy gespeichert und LSA_topics.txt gespeichert -> Fortfahren mit dem Coherence Score
-      
-      """)
+    # Regex-Muster für die Schlüsselwörter erstellen
+    muster = '|'.join(schluesselwoerter)
 
-# Coherence Score LSA
-print("""Berechne Coherence Score für LSA...
-      
-      """)
-matrix = np.load(lsa_file)
-bewertungen = pd.read_csv('C:/temp/studium/TINDER_REVIEWS.csv')
-vectorizer = CountVectorizer()
-term = vectorizer.fit_transform(bewertungen['review_text'])
-with open(features_file, 'r') as f:
-    terms = [line.strip() for line in f]
-topics = []
-for topic_idx in range(matrix.shape[0]):
-    topic_terms = [terms[i] for i in np.argsort(matrix[topic_idx])[::-1][:15] if i < len(terms)]
-    topics.append(topic_terms)
-def coherence(topics, vectorizer, X):
-    coherence_scores = []
-    for topic in topics:
-        topic_indices = [vectorizer.vocabulary_.get(term) for term in topic if term in vectorizer.vocabulary_]
-        if len(topic_indices) < 2:
-            continue
-        topic_vectors = X[:, topic_indices].toarray()
-        sim_matrix = cosine_similarity(topic_vectors.T)
-        coherence = np.mean(sim_matrix[np.triu_indices_from(sim_matrix, k=1)])
-        coherence_scores.append(coherence)
-    return np.mean(coherence_scores)
-score = coherence(topics, vectorizer, term)
-print(f'Coherence Score für LSA: {score}')
+    # Filtern der Daten nach den Schlüsselwörtern
+    daten = daten[daten['review_text'].str.contains(muster, case=False, na=False)]
+
+    return daten
+
+# Phase 2: Textbereinigung und Lemmatisierung
+def texte_bereinigen_und_lemmatisieren(daten):
+    # Initialisierung von Pandarallel für parallele Verarbeitung
+    pandarallel.initialize(progress_bar=True)
+
+    # Funktion zur Textbereinigung (Kleinbuchstaben, nicht-alphabetische Zeichen entfernen)
+    def text_bereinigen(text):
+        import re
+        text = text.lower()
+        text = re.sub(r'[^A-Za-z\süäöÜÄÖ]', '', text)
+        text = re.sub(r'http\S+', '', text)
+        return text
+
+    # Funktion zur Lemmatisierung und Entfernung von Stoppwörtern
+    lemmatisierer = WordNetLemmatizer()
+    stoppwoerter = set(stopwords.words('english'))
+
+    def lemmatisieren_und_stoppwoerter_entfernen(text):
+        woerter = text.split()
+        bereinigte_woerter = [lemmatisierer.lemmatize(wort) for wort in woerter if wort not in stoppwoerter]
+        return ' '.join(bereinigte_woerter)
+
+    # Bereinigung und Lemmatisierung der Texte parallel durchführen
+    daten['review_text'] = daten['review_text'].parallel_apply(text_bereinigen)
+    daten['review_text'] = daten['review_text'].parallel_apply(lemmatisieren_und_stoppwoerter_entfernen)
+
+    # Entfernen von leeren Einträgen und Duplikaten
+    daten.dropna(subset=['review_text'], inplace=True)
+    daten.drop_duplicates(subset=['review_text'], inplace=True)
+
+    return daten
+
+# Phase 3: Bag-of-Words und Latent Semantic Analysis (LSA)
+def bow_und_lsa(daten, bow_datei, feature_datei, lsa_datei, themen_datei):
+    # Erstellen eines Bag-of-Words-Modells
+    vektorisierer = CountVectorizer()
+    bow_matrix = vektorisierer.fit_transform(daten['review_text'])
+
+    # Speichern der BoW-Matrix
+    scipy.sparse.save_npz(bow_datei, bow_matrix)
+
+    # Speichern der einzigartigen Wörter
+    with open(feature_datei, 'w') as f:
+        for wort in vektorisierer.get_feature_names_out():
+            f.write(f"{wort}\n")
+
+    # LSA durchführen, um Themen zu extrahieren
+    anzahl_themen = 15
+    modell = TruncatedSVD(n_components=anzahl_themen, random_state=42)
+    lsa_matrix = modell.fit_transform(bow_matrix)
+
+    # Extrahieren und Speichern der Themen
+    themen = []
+    for i, komponente in enumerate(modell.components_):
+        woerter_im_thema = vektorisierer.get_feature_names_out()[np.argsort(komponente)][:-16:-1]
+        themen.append(woerter_im_thema)
+        print(f"Thema {i}: {', '.join(woerter_im_thema)}")
+
+    # Speichern der Themen in einer Textdatei
+    with open(themen_datei, 'w') as f:
+        for idx, thema in enumerate(themen):
+            f.write(f"Thema {idx}: {', '.join(thema)}\n")
+
+    # Speichern der LSA-Komponenten
+    np.save(lsa_datei, modell.components_)
+
+    return vektorisierer, bow_matrix, themen
+
+# Phase 4: Berechnung des Coherence Scores
+def kohärenz_berechnen(vektorisierer, bow_matrix, themen):
+    # Funktion zur Berechnung des Coherence Scores
+    def kohärenz(themen, vektorisierer, matrix):
+        kohärenz_scores = []
+        for thema in themen:
+            thema_indizes = [vektorisierer.vocabulary_.get(wort) for wort in thema if wort in vektorisierer.vocabulary_]
+            if len(thema_indizes) < 2:
+                continue
+            thema_vektoren = matrix[:, thema_indizes].toarray()
+            ähnlichkeit_matrix = cosine_similarity(thema_vektoren.T)
+            kohärenz = np.mean(ähnlichkeit_matrix[np.triu_indices_from(ähnlichkeit_matrix, k=1)])
+            kohärenz_scores.append(kohärenz)
+        return np.mean(kohärenz_scores)
+
+    # Berechnung des Coherence Scores
+    score = kohärenz(themen, vektorisierer, bow_matrix)
+    print(f'Coherence Score für LSA: {score}')
+
+    # Bewertung des Coherence Scores
+    if score < 0.2:
+        bewertung = "Sehr schlecht"
+    elif 0.2 <= score < 0.4:
+        bewertung = "Schlecht"
+    elif 0.4 <= score < 0.6:
+        bewertung = "Akzeptabel"
+    elif 0.6 <= score < 0.8:
+        bewertung = "Gut"
+    else:
+        bewertung = "Sehr gut"
+
+    print(f'Die Bewertung des Coherence Scores ist: {bewertung}')
+
+# Hauptfunktion, die die Phasen nacheinander ausführt
+def main():
+    dateipfad = 'C:/temp/studium/TINDER_REVIEWS.csv'
+    bow_datei = 'C:/temp/studium/BoW_tinder_reviews.npz'
+    feature_datei = 'C:/temp/studium/BoW_features.txt'
+    lsa_datei = 'C:/temp/studium/LSA_themen.npy'
+    themen_datei = 'C:/temp/studium/LSA_topics.txt'
+
+    # Phase 1: Daten laden und filtern
+    daten = daten_laden_und_filtern(dateipfad)
+
+    # Phase 2: Texte bereinigen und lemmatisieren
+    daten = texte_bereinigen_und_lemmatisieren(daten)
+
+    # Phase 3: Bag-of-Words und LSA
+    vektorisierer, bow_matrix, themen = bow_und_lsa(daten, bow_datei, feature_datei, lsa_datei, themen_datei)
+
+    # Phase 4: Kohärenz berechnen
+    kohärenz_berechnen(vektorisierer, bow_matrix, themen)
+
+if __name__ == "__main__":
+    main()

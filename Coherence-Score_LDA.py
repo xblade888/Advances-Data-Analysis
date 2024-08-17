@@ -47,5 +47,5 @@ def coherence(topics, vectorizer, X):
     return np.mean(coherence_scores)
 
 # Berechnung des durschschnittlichen Scores uns Ausgabe in der CLI
-lda_coherence_score = coherence(topics, vectorizer, term)
-print(f'Coherence Score für LDA: {lda_coherence_score}')
+score = coherence(topics, vectorizer, term)
+print(f'Coherence Score für LDA: {score}')

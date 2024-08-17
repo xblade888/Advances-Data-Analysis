@@ -49,3 +49,4 @@ def coherence(topics, vectorizer, X):
 # Berechnung des durschschnittlichen Scores uns Ausgabe in der CLI
 score = coherence(topics, vectorizer, term)
 print(f'Coherence Score für LSA: {score}')
+

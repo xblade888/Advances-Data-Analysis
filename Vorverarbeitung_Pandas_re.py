@@ -20,3 +20,4 @@ bewertungen.drop_duplicates(subset=['review_text'], inplace=True)
 # Überschreiben der vorhandenen Datein und Erfolgsnachricht
 bewertungen.to_csv('C:/temp/studium/TINDER_REVIEWS.csv', index=False)
 print("Bewertungen erfolgreich gefiltert, Datei überschrieben")
+

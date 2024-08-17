@@ -33,3 +33,4 @@ with open(file, 'w') as f:
 lda_file = 'C:/temp/studium/LDA_themen.npy'
 np.save(lda_file, modell.components_)
 print("Topic-Modeling mit LDA abgeschlossen. In der neuen Datei LDA_themen.npy gespeichert")
+
